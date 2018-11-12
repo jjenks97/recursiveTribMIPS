@@ -7,6 +7,9 @@
 	tribNTextEnd: .asciiz "): "
 
 .text
+
+main:
+
 #prompts user for tribonacci(0)
 trib0:
 li $v0, 4
@@ -17,9 +20,9 @@ syscall
 li $v0, 5
 syscall
 
-move $t0, $v0
+move $s0, $v0
 
-blt $t0, $zero, trib0
+blt $s0, $zero, trib0
 
 #prompts user for tribonacci(1)
 trib1:
@@ -31,9 +34,9 @@ syscall
 li $v0, 5
 syscall
 
-move $t1, $v0
+move $s1, $v0
 
-blt $t1, $zero, trib1
+blt $s1, $zero, trib1
 
 
 #prompts user for tribonacci(2)
@@ -46,9 +49,9 @@ syscall
 li $v0, 5
 syscall
 
-move $t2, $v0
+move $s2, $v0
 
-blt $t2, $zero, trib2
+blt $s2, $zero, trib2
 
 
 #prompts user for n
@@ -61,58 +64,27 @@ syscall
 li $v0, 5
 syscall
 
-move $t3, $v0
+move $s3, $v0
 
-blt $t3, $zero, nTerm
-
-#in case the user sets n as 0, 1, or 2
-ble $t3, 2, nLessThan3
-
-#subtracts 3 from n
-sub $t5, $t3, 3
-tribAdd:
-#adds trib 1, 2, and 3 and stores in $t4
-add $t4, $t0, $t1
-add $t4, $t4, $t2
-
-#exit condition n == 0
-
-beqz $t5, end
-
-#sets trib0 = trib1, trib1 = trib2, and trib3 = $t4
-add $t0, $t1, $zero
-add $t1, $t2, $zero
-add $t2, $t4, $zero
-
-#n = n - 1
-sub $t5, $t5, 1
-
-#jumps to tribAdd
-j tribAdd
+blt $s3, $zero, nTerm
 
 
 
 
+#calls trib function
+#stores n in $a2 
+add $a2, $s3, $zero
+
+
+jal trib
+
+#move the value of trib(n) to a1
+move $a1, $s5
+
+j end
 
 
 
-#in case user enters a value for n that is less than 3
-nLessThan3:
-beq $t3, 2, nEquals2
-beq $t3, 1, nEquals1
-beq $t3, 0, nEquals0
-
-nEquals2:
-move $t4, $t2
-b end
-
-nEquals1:
-move $t4, $t1
-b end
-
-nEquals0:
-move $t4, $t0
-b end
 
 
 
@@ -124,7 +96,7 @@ la $a0, tribNTextStart
 syscall
 
 li $v0, 1
-move $a0, $t3
+move $a0, $s3
 syscall
 
 li $v0, 4
@@ -132,10 +104,85 @@ la $a0, tribNTextEnd
 syscall
 
 li $v0, 1
-move $a0, $t4
+move $a0, $a1
 syscall
 
+#ends program
+li $v0, 10
+syscall 
 
 
 
+
+
+trib:
+#size of stack
+addi $sp, $sp, -12
+
+sw $ra, 0($sp) #stores address on stack
+sw $s4, 4($sp) #current location of n
+sw $s5, 8($sp) #value of trib(n)
+
+#sets s4 equal to n
+move $s4, $a2
+
+beq $s4, 0, return0 #if n==0
+beq $s4, 1, return1 #if n==1
+beq $s4, 2, return2 #if n==2
+
+#n = n - 1
+addi $a2, $s4, -1
+
+jal trib
+#shifts stack down
+addi $sp, $sp, -12
+
+#n = n - 2
+addi $a2, $s4, -2
+
+jal trib
+#shifts stack down
+addi $sp, $sp, -12
+
+#n = n - 3
+addi $a2, $s4, -3
+
+
+jal trib
+
+#resets stack back to current position
+addi $sp, $sp, 24
+
+lw $t0, -4($sp) # t0 = n - 1
+lw $t1, -16($sp) #t1 = n - 2
+lw $t2, -28($sp) #t2 = n - 3
+
+
+# t0 + t1 + t2
+add $s5, $t0, $t1
+add $s5, $t2, $s5
+
+#stores s5
+sw $s5, 8($sp)
+
+exitTrib:
+
+lw $ra, 0($sp)
+lw $s4, 4($sp)
+lw $s5, 8($sp)
+addi $sp, $sp, 12
+jr $ra
+
+
+return0:
+sw $s0, 8($sp)
+j exitTrib
+
+return1:
+sw $s1, 8($sp)
+j exitTrib
+
+return2:
+sw $s2, 8($sp)
+j exitTrib
 
